@@ -47,11 +47,7 @@ async fn main() -> anyhow::Result<()> {
     );
     let archiver = Archiver::new(store.clone());
 
-    let addr: SocketAddr = std::env::var("VIDEOS_ADDR")
-        .as_deref()
-        .unwrap_or("127.0.0.1:3000")
-        .parse()
-        .context("invalid VIDEOS_ADDR")?;
+    let addr: SocketAddr = config.address;
 
     let (wake_tx, wake_rx) = mpsc::channel(1);
     let (poll_tx, poll_rx) = mpsc::channel(1);
