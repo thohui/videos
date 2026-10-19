@@ -34,7 +34,7 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("failed to create data directory")?;
 
-    let db = DatabasePool::connect("videos.db").await?;
+    let db = DatabasePool::connect(&config.database_path).await?;
     run_migrations(&db).await?;
 
     let requeued = video::reset_downloading(&db).await?;
