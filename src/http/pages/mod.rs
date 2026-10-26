@@ -6,6 +6,7 @@ use chrono::DateTime;
 use leptos::prelude::*;
 
 use super::AppState;
+use crate::database::category::Category;
 
 mod admin;
 mod index;
@@ -24,6 +25,20 @@ pub fn routes() -> Router<AppState> {
         .route("/admin/videos", post(admin::queue_video))
         .route("/admin/videos/{id}/retry", post(admin::retry_video))
         .route("/admin/videos/{id}/remove", post(admin::remove_video))
+        .route("/admin/categories", post(admin::add_category))
+        .route("/admin/categories/{id}", post(admin::update_category))
+        .route(
+            "/admin/categories/{id}/remove",
+            post(admin::remove_category),
+        )
+        .route(
+            "/admin/channels/{id}/categories",
+            post(admin::set_channel_categories),
+        )
+        .route(
+            "/admin/videos/{id}/categories",
+            post(admin::set_video_categories),
+        )
         .route("/static/style.css", get(style))
         .fallback(|| async { (StatusCode::NOT_FOUND, page("not found", not_found())) })
 }
@@ -59,9 +74,28 @@ fn not_found() -> impl IntoView {
     view! { <p class="empty">"Not found"</p> }
 }
 
-fn back_to_admin(msg: &str) -> Redirect {
-    let query = serde_urlencoded::to_string([("msg", msg)]).unwrap_or_default();
-    Redirect::to(&format!("/admin?{query}"))
+pub enum AdminRedirectMessage {
+    Notification(String),
+    Error(String),
+}
+
+impl AdminRedirectMessage {
+    pub fn query(self) -> String {
+        match self {
+            Self::Notification(msg) => {
+                serde_urlencoded::to_string(["msg", &msg]).unwrap_or_default()
+            }
+            Self::Error(msg) => serde_urlencoded::to_string(["error", &msg]).unwrap_or_default(),
+        }
+    }
+}
+
+fn back_to_admin(message: Option<AdminRedirectMessage>) -> Redirect {
+    if let Some(query) = message.map(|m| m.query()) {
+        Redirect::to(&format!("/admin?{query}"))
+    } else {
+        Redirect::to("/admin")
+    }
 }
 
 struct PageError(anyhow::Error);
@@ -98,9 +132,27 @@ fn format_time(ts: i64, fmt: &str) -> String {
 }
 
 fn date(ts: Option<i64>) -> String {
-    ts.map(|ts| format_time(ts, "%-d %b %Y")).unwrap_or_default()
+    ts.map(|ts| format_time(ts, "%-d %b %Y"))
+        .unwrap_or_default()
 }
 
 fn date_time(ts: i64) -> String {
     format_time(ts, "%-d %b %H:%M")
+}
+
+fn hex_color(color: i64) -> String {
+    format!("#{:06x}", color & 0xFFFFFF)
+}
+
+fn parse_hex_color(s: &str) -> Option<i64> {
+    let hex = s.strip_prefix('#')?;
+    if hex.len() != 6 {
+        return None;
+    }
+    i64::from_str_radix(hex, 16).ok()
+}
+
+fn chip<V: IntoView + 'static>(category: &Category, extra: V) -> impl IntoView + use<V> {
+    let style = format!("--c: {}", hex_color(category.color));
+    view! { <span class="chip" style=style>{category.name.clone()}{extra}</span> }
 }

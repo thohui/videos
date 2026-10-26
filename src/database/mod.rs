@@ -4,6 +4,7 @@ use rusqlite_migration::MigrationsBuilder;
 
 pub mod channel;
 pub mod video;
+pub mod category;
 
 #[derive(Debug, thiserror::Error)]
 pub enum DatabaseError {

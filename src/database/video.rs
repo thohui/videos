@@ -2,6 +2,7 @@ use rusqlite::types::{FromSql, FromSqlError, FromSqlResult, ToSql, ToSqlOutput, 
 use rusqlite::{OptionalExtension, Row};
 use serde::{Deserialize, Serialize};
 
+use super::category::Category;
 use super::{DatabaseError, DatabasePool};
 use crate::archive::ArchivedVideo;
 
@@ -45,13 +46,17 @@ pub struct ListedVideo {
     #[serde(flatten)]
     pub video: Video,
     pub channel_name: Option<String>,
+    pub categories: Vec<Category>,
 }
 
 impl ListedVideo {
     pub fn from_row(row: &Row) -> rusqlite::Result<Self> {
+        let categories: String = row.get("categories")?;
         Ok(Self {
             video: Video::from_row(row)?,
             channel_name: row.get("channel_name")?,
+            categories: serde_json::from_str(&categories)
+                .map_err(|e| rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, e.into()))?,
         })
     }
 }
@@ -148,6 +153,7 @@ pub async fn get(db: &DatabasePool, id: &str) -> Result<Option<Video>, DatabaseE
 pub async fn list(
     db: &DatabasePool,
     channel_id: Option<&str>,
+    category_id: Option<i64>,
     status: Option<Status>,
     limit: u32,
     offset: u32,
@@ -155,14 +161,20 @@ pub async fn list(
     let channel_id = channel_id.map(str::to_owned);
     db.interact(move |c| {
         c.prepare(
-            "SELECT videos.*, channels.name AS channel_name
+            "SELECT videos.*, channels.name AS channel_name,
+               (SELECT json_group_array(json_object('id', c.id, 'name', c.name, 'color', c.color) ORDER BY c.name)
+                FROM videos_categories vc JOIN categories c ON c.id = vc.category_id
+                WHERE vc.video_id = videos.id) AS categories
              FROM videos LEFT JOIN channels ON channels.id = videos.channel_id
              WHERE (?1 IS NULL OR videos.channel_id = ?1)
-               AND (videos.status = ?2 OR (?2 IS NULL AND videos.status != 'deleted'))
+               AND (?2 IS NULL OR EXISTS (
+                     SELECT 1 FROM videos_categories vc
+                     WHERE vc.video_id = videos.id AND vc.category_id = ?2))
+               AND (videos.status = ?3 OR (?3 IS NULL AND videos.status != 'deleted'))
              ORDER BY coalesce(videos.published_at, videos.created_at) DESC
-             LIMIT ?3 OFFSET ?4",
+             LIMIT ?4 OFFSET ?5",
         )?
-        .query_map((channel_id, status, limit, offset), ListedVideo::from_row)?
+        .query_map((channel_id, category_id, status, limit, offset), ListedVideo::from_row)?
         .collect()
     })
     .await

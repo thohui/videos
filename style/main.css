@@ -204,3 +204,101 @@ video {
     background: var(--card);
     border-radius: 4px;
 }
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.chips a {
+    text-decoration: none;
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 1px 8px;
+    font-size: 12px;
+    line-height: 18px;
+    color: var(--text);
+    white-space: nowrap;
+    background: color-mix(in srgb, var(--c) 25%, transparent);
+    border: 1px solid color-mix(in srgb, var(--c) 70%, transparent);
+    border-radius: 999px;
+}
+
+.channels a.active .chip {
+    background: color-mix(in srgb, var(--c) 55%, transparent);
+}
+
+.admin td .chips {
+    margin-top: 0;
+}
+
+.admin select {
+    padding: 2px 4px;
+    font: inherit;
+    color: var(--text);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+.admin input[type="color"] {
+    width: 32px;
+    height: 26px;
+    padding: 2px;
+    vertical-align: middle;
+}
+
+.admin .picker {
+    position: relative;
+}
+
+.admin .picker summary {
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.admin .picker summary::-webkit-details-marker {
+    display: none;
+}
+
+.admin .picker summary:hover,
+.admin .picker[open] summary {
+    color: var(--text);
+}
+
+.admin .picker form {
+    position: absolute;
+    z-index: 1;
+    top: 100%;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 160px;
+    margin-top: 4px;
+    padding: 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+.admin .picker label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.admin .picker button {
+    align-self: flex-start;
+    margin-top: 4px;
+}
